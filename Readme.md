@@ -116,8 +116,7 @@ week6-ledgerQuery/
 │   └── sample_expenses.csv     # 15-row synthetic dataset for testing
 ├── tests/
 │   └── test_pipeline.py        # 9 pytest tests
-├── screenshots/
-│   └── demo.png
+├── demo.png                    # UI screenshot
 ├── .env                        # GROQ_API_KEY (not committed)
 ├── .gitignore
 ├── app.py                      # Gradio UI
