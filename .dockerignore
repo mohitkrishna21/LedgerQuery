@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+*.db
+.gradio/
+venv/
+.venv/
+*.log
+.pytest_cache/
+.DS_Store
+.git/
+data/uploaded.csv
