@@ -170,7 +170,32 @@ python -m uvicorn fastapi_backend:app --reload
 Opens at `http://localhost:8000`
 
 ---
+## Running the App
 
+**Option A — Gradio UI (standalone)**
+
+```bash
+python app.py
+```
+
+Opens at `http://localhost:7860`
+
+**Option B — FastAPI + Custom HTML UI**
+
+```bash
+python -m uvicorn fastapi_backend:app --reload
+```
+
+Opens at `http://localhost:8000`
+
+**Option C — Docker (recommended)**
+
+```bash
+docker build -t ledgerquery .
+docker run -p 8000:8000 --env-file .env ledgerquery
+```
+
+Opens at `http://localhost:8000`. No local Python setup required — just Docker and a `.env` file with your `GROQ_API_KEY`.
 ## Running Tests
 
 ```bash
