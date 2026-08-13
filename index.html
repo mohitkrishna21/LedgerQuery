@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LedgerQuery</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f1f5f9;
+      --surface:   #ffffff;
+      --border:    #e2e8f0;
+      --primary:   #4f46e5;
+      --primary-h: #4338ca;
+      --primary-lt:#eef2ff;
+      --primary-bd:#c7d2fe;
+      --text:      #1e293b;
+      --text-md:   #475569;
+      --text-sm:   #64748b;
+      --text-xs:   #94a3b8;
+      --success-bg:#f0fdf4;
+      --success-bd:#bbf7d0;
+      --success-tx:#166534;
+      --error-bg:  #fef2f2;
+      --error-bd:  #fecaca;
+      --error-tx:  #991b1b;
+      --code-bg:   #1e293b;
+      --code-tx:   #e2e8f0;
+      --user-bg:   #4f46e5;
+      --user-tx:   #ffffff;
+      --bot-bg:    #f8fafc;
+      --bot-tx:    #1e293b;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --shadow:    0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+
+    .header-brand {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .header-brand span {
+      color: var(--primary);
+    }
+
+    .header-tagline {
+      margin-left: auto;
+      font-size: 0.78rem;
+      color: var(--text-xs);
+    }
+
+    /* ── Main layout ── */
+    .main {
+      display: flex;
+      flex: 1;
+      gap: 14px;
+      padding: 14px;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── Left panel ── */
+    .left-panel {
+      width: 290px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+
+    .section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed var(--primary-bd);
+      border-radius: var(--radius-md);
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.18s, background 0.18s;
+      background: #fafbff;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+      border-color: var(--primary);
+      background: var(--primary-lt);
+    }
+
+    .drop-zone input[type="file"] { display: none; }
+
+    .drop-icon { font-size: 2rem; margin-bottom: 8px; }
+
+    .drop-primary {
+      font-size: 0.84rem;
+      font-weight: 500;
+      color: var(--text-md);
+      margin-bottom: 3px;
+    }
+
+    .drop-secondary {
+      font-size: 0.72rem;
+      color: var(--text-xs);
+    }
+
+    /* File chip */
+    .file-chip {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary-lt);
+      border: 1px solid var(--primary-bd);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+    }
+
+    .file-chip.visible { display: flex; }
+
+    .file-chip-icon { font-size: 1rem; flex-shrink: 0; }
+
+    .file-chip-name {
+      font-size: 0.8rem;
+      color: #3730a3;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Primary button */
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 11px 16px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.18s, opacity 0.18s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary:hover:not(:disabled) { background: var(--primary-h); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Status */
+    .status {
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 0.8rem;
+      display: none;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.5;
+    }
+
+    .status.show { display: flex; }
+
+    .status.success {
+      background: var(--success-bg);
+      border: 1px solid var(--success-bd);
+      color: var(--success-tx);
+    }
+
+    .status.error {
+      background: var(--error-bg);
+      border: 1px solid var(--error-bd);
+      color: var(--error-tx);
+    }
+
+    .status.loading {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      color: var(--text-sm);
+    }
+
+    /* Schema */
+    .schema-section { display: none; flex-direction: column; gap: 8px; }
+    .schema-section.visible { display: flex; }
+
+    .schema-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+
+    .schema-table-name {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 5px;
+    }
+
+    .schema-col {
+      display: inline-block;
+      background: var(--primary-lt);
+      border: 1px solid var(--primary-bd);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.68rem;
+      color: #3730a3;
+      font-weight: 500;
+      margin: 2px 2px 0 0;
+    }
+
+    /* ── Right panel ── */
+    .right-panel {
+      flex: 1;
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    /* Chat header */
+    .chat-topbar {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .chat-topbar-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .q-badge {
+      background: var(--primary-lt);
+      color: var(--primary);
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 20px;
+      letter-spacing: 0.02em;
+    }
+
+    /* Chat messages */
+    .chat-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      scroll-behavior: smooth;
+    }
+
+    .chat-body::-webkit-scrollbar { width: 4px; }
+    .chat-body::-webkit-scrollbar-track { background: transparent; }
+    .chat-body::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-align: center;
+      color: var(--text-xs);
+      padding: 40px;
+    }
+
+    .empty-icon { font-size: 2.8rem; }
+    .empty-title { font-size: 0.95rem; font-weight: 600; color: var(--text-sm); }
+    .empty-sub   { font-size: 0.8rem; line-height: 1.6; }
+
+    /* Message rows */
+    .msg-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .msg-row.user  { align-items: flex-end; }
+    .msg-row.bot   { align-items: flex-start; }
+
+    .msg-sender {
+      font-size: 0.67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-xs);
+      padding: 0 4px;
+    }
+
+    /* Bubbles */
+    .bubble {
+      max-width: 78%;
+      padding: 11px 15px;
+      border-radius: 14px;
+      font-size: 0.87rem;
+      line-height: 1.65;
+    }
+
+    .msg-row.user .bubble {
+      background: var(--user-bg);
+      color: var(--user-tx);
+      border-bottom-right-radius: 3px;
+    }
+
+    .msg-row.bot .bubble {
+      background: var(--bot-bg);
+      border: 1px solid var(--border);
+      color: var(--bot-tx);
+      border-bottom-left-radius: 3px;
+    }
+
+    /* SQL + answer inside bot bubble */
+    .mini-label {
+      font-size: 0.66rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 5px;
+    }
+
+    .mini-label.sql-lbl   { color: var(--text-xs); }
+    .mini-label.ans-lbl   { color: var(--primary); margin-top: 10px; }
+
+    .sql-block {
+      background: var(--code-bg);
+      color: var(--code-tx);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.76rem;
+      line-height: 1.6;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .ans-text {
+      font-size: 0.87rem;
+      color: var(--bot-tx);
+      line-height: 1.65;
+    }
+
+    /* Loading dots */
+    .loading-bubble {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 12px 15px;
+      background: var(--bot-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      border-bottom-left-radius: 3px;
+    }
+
+    .dot {
+      width: 6px; height: 6px;
+      background: var(--text-xs);
+      border-radius: 50%;
+      animation: bounce 1.1s infinite ease-in-out;
+    }
+
+    .dot:nth-child(2) { animation-delay: 0.18s; }
+    .dot:nth-child(3) { animation-delay: 0.36s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+      40%            { transform: translateY(-7px); opacity: 1; }
+    }
+
+    /* Input bar */
+    .input-bar {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+
+    .q-input {
+      flex: 1;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 11px 14px;
+      font-size: 0.88rem;
+      font-family: inherit;
+      color: var(--text);
+      background: #f8fafc;
+      outline: none;
+      resize: none;
+      line-height: 1.55;
+      transition: border-color 0.18s, background 0.18s;
+      max-height: 120px;
+    }
+
+    .q-input::placeholder { color: var(--text-xs); }
+
+    .q-input:focus {
+      border-color: var(--primary);
+      background: #fff;
+    }
+
+    .ask-btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 11px 22px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s, opacity 0.18s;
+      white-space: nowrap;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .ask-btn:hover:not(:disabled) { background: var(--primary-h); }
+    .ask-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Spinner */
+    .spinner {
+      width: 13px; height: 13px;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="logo">📊</div>
+  <span class="header-brand">Ledger<span>Query</span></span>
+  <span class="header-tagline">Natural language Q&amp;A for your financial data</span>
+</header>
+
+<!-- ── Main ── -->
+<div class="main">
+
+  <!-- Left: upload panel -->
+  <aside class="left-panel">
+    <div class="section-label">Data Source</div>
+
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".csv,.db" />
+      <div class="drop-icon">📂</div>
+      <div class="drop-primary">Drop file here or <strong>browse</strong></div>
+      <div class="drop-secondary">CSV · SQLite DB · max 50 MB</div>
+    </div>
+
+    <div class="file-chip" id="fileChip">
+      <span class="file-chip-icon">📄</span>
+      <span class="file-chip-name" id="fileName">—</span>
+    </div>
+
+    <button class="btn-primary" id="uploadBtn" disabled>
+      Upload
+    </button>
+
+    <div class="status" id="statusBox">
+      <span id="statusIcon"></span>
+      <span id="statusText"></span>
+    </div>
+
+    <div class="schema-section" id="schemaSection">
+      <div class="section-label">Schema</div>
+      <div id="schemaCards"></div>
+    </div>
+  </aside>
+
+  <!-- Right: chat panel -->
+  <section class="right-panel">
+    <div class="chat-topbar">
+      <span class="chat-topbar-title">Session History</span>
+      <span class="q-badge" id="qBadge">0 questions</span>
+    </div>
+
+    <div class="chat-body" id="chatBody">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">💬</div>
+        <div class="empty-title">No questions yet</div>
+        <div class="empty-sub">Upload your CSV or database,<br>then ask anything about your finances.</div>
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <textarea
+        class="q-input"
+        id="qInput"
+        placeholder="Ask a question about your data..."
+        rows="1"
+      ></textarea>
+      <button class="ask-btn" id="askBtn">Ask</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const API = 'http://localhost:8000';
+
+  // ── State ──────────────────────────────────────────────────────
+  let selectedFile = null;
+  let questionCount = 0;
+
+  // ── Elements ───────────────────────────────────────────────────
+  const dropZone   = document.getElementById('dropZone');
+  const fileInput  = document.getElementById('fileInput');
+  const fileChip   = document.getElementById('fileChip');
+  const fileNameEl = document.getElementById('fileName');
+  const uploadBtn  = document.getElementById('uploadBtn');
+  const statusBox  = document.getElementById('statusBox');
+  const schemaSection = document.getElementById('schemaSection');
+  const schemaCards   = document.getElementById('schemaCards');
+  const chatBody   = document.getElementById('chatBody');
+  const emptyState = document.getElementById('emptyState');
+  const qInput     = document.getElementById('qInput');
+  const askBtn     = document.getElementById('askBtn');
+  const qBadge     = document.getElementById('qBadge');
+
+  // ── File handling ──────────────────────────────────────────────
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) pickFile(fileInput.files[0]);
+  });
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) pickFile(e.dataTransfer.files[0]);
+  });
+
+  function pickFile(file) {
+    selectedFile = file;
+    fileNameEl.textContent = file.name;
+    fileChip.classList.add('visible');
+    uploadBtn.disabled = false;
+    clearStatus();
+  }
+
+  // ── Upload ─────────────────────────────────────────────────────
+  uploadBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    uploadBtn.disabled = true;
+    setStatus('loading', '⏳', 'Uploading and processing…');
+
+    const fd = new FormData();
+    fd.append('file', selectedFile);
+
+    try {
+      const res  = await fetch(`${API}/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+
+      if (data.tables) {
+        setStatus('success', '✅', `Ready — ${data.tables.length} table(s) loaded`);
+        renderSchema(data.schema);
+      } else {
+        setStatus('error', '❌', data.message || 'Upload failed.');
+        uploadBtn.disabled = false;
+      }
+    } catch {
+      setStatus('error', '❌', 'Cannot reach server. Is FastAPI running on :8000?');
+      uploadBtn.disabled = false;
+    }
+  });
+
+  function setStatus(type, icon, text) {
+    statusBox.className = `status show ${type}`;
+    document.getElementById('statusIcon').textContent = icon;
+    document.getElementById('statusText').textContent = text;
+  }
+
+  function clearStatus() {
+    statusBox.className = 'status';
+  }
+
+  function renderSchema(schema) {
+    schemaCards.innerHTML = '';
+    if (!schema) return;
+
+    Object.entries(schema).forEach(([table, cols]) => {
+      const card = document.createElement('div');
+      card.className = 'schema-card';
+      const chips = cols.map(c => `<span class="schema-col">${esc(c)}</span>`).join('');
+      card.innerHTML = `<div class="schema-table-name">${esc(table)}</div><div>${chips}</div>`;
+      schemaCards.appendChild(card);
+    });
+
+    schemaSection.classList.add('visible');
+  }
+
+  // ── Ask ────────────────────────────────────────────────────────
+  qInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendQuestion();
+    }
+  });
+
+  askBtn.addEventListener('click', sendQuestion);
+
+  qInput.addEventListener('input', () => {
+    qInput.style.height = 'auto';
+    qInput.style.height = Math.min(qInput.scrollHeight, 120) + 'px';
+  });
+
+  async function sendQuestion() {
+    const q = qInput.value.trim();
+    if (!q) return;
+
+    qInput.value = '';
+    qInput.style.height = 'auto';
+    askBtn.disabled = true;
+    askBtn.innerHTML = '<div class="spinner"></div> Thinking…';
+
+    hideEmpty();
+    addUserBubble(q);
+    const loadingEl = addLoadingBubble();
+
+    const fd = new FormData();
+    fd.append('question', q);
+
+    try {
+      const res  = await fetch(`${API}/ask`, { method: 'POST', body: fd });
+      const data = await res.json();
+      loadingEl.remove();
+
+      if (data.answer) {
+        addBotBubble(data.sql, data.answer);
+      } else {
+        addBotBubble(null, data.error || 'No response from server.');
+      }
+    } catch {
+      loadingEl.remove();
+      addBotBubble(null, 'Cannot reach server. Is FastAPI running on :8000?');
+    }
+
+    questionCount++;
+    qBadge.textContent = `${questionCount} question${questionCount !== 1 ? 's' : ''}`;
+    askBtn.disabled = false;
+    askBtn.textContent = 'Ask';
+    scrollBottom();
+  }
+
+  function hideEmpty() {
+    if (emptyState && emptyState.parentNode) emptyState.remove();
+  }
+
+  function addUserBubble(text) {
+    const row = document.createElement('div');
+    row.className = 'msg-row user';
+    row.innerHTML = `
+      <div class="msg-sender">You</div>
+      <div class="bubble">${esc(text)}</div>
+    `;
+    chatBody.appendChild(row);
+    scrollBottom();
+  }
+
+  function addBotBubble(sql, answer) {
+    const row = document.createElement('div');
+    row.className = 'msg-row bot';
+
+    let inner = '';
+    if (sql) {
+      inner = `
+        <div class="mini-label sql-lbl">SQL Generated</div>
+        <div class="sql-block">${esc(sql)}</div>
+        <div class="mini-label ans-lbl">Answer</div>
+        <div class="ans-text">${esc(answer)}</div>
+      `;
+    } else {
+      inner = `<div class="ans-text">${esc(answer)}</div>`;
+    }
+
+    row.innerHTML = `
+      <div class="msg-sender">LedgerQuery</div>
+      <div class="bubble">${inner}</div>
+    `;
+    chatBody.appendChild(row);
+    scrollBottom();
+  }
+
+  function addLoadingBubble() {
+    const row = document.createElement('div');
+    row.className = 'msg-row bot';
+    row.innerHTML = `
+      <div class="msg-sender">LedgerQuery</div>
+      <div class="loading-bubble">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    `;
+    chatBody.appendChild(row);
+    scrollBottom();
+    return row;
+  }
+
+  function scrollBottom() {
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>
