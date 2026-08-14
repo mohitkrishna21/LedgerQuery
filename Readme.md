@@ -169,25 +169,6 @@ python -m uvicorn fastapi_backend:app --reload
 
 Opens at `http://localhost:8000`
 
----
-## Running the App
-
-**Option A — Gradio UI (standalone)**
-
-```bash
-python app.py
-```
-
-Opens at `http://localhost:7860`
-
-**Option B — FastAPI + Custom HTML UI**
-
-```bash
-python -m uvicorn fastapi_backend:app --reload
-```
-
-Opens at `http://localhost:8000`
-
 **Option C — Docker (recommended)**
 
 ```bash
