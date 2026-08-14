@@ -27,7 +27,7 @@ def handle_question(question, history):
         history.append({"role": "user", "content": question})
         history.append({"role": "assistant", "content": "No data uploaded yet. Please upload a file first."})
         return history, ""
-    sql_query = generate_valid_sql(question, current_schema, current_schema_text)
+    sql_query, _ = generate_valid_sql(question, current_schema, current_schema_text)
     if sql_query is None:
         history.append({"role": "user", "content": question})
         history.append({"role": "assistant", "content": "Could not generate a valid SQL query for this question."})

@@ -5,9 +5,36 @@ from groq import Groq
 import os
 import sqlglot
 from sqlglot import exp
+import csv
+import time
+from datetime import datetime
 
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+# ── Logging setup ─────────────────────────────────────────────────────────────
+LOG_PATH = "logs/query_log.csv"
+LOG_HEADERS = ["timestamp", "question", "sql", "retry_count", "exec_time_ms", "total_time_ms", "status"]
+
+def _ensure_log_file():
+    os.makedirs("logs", exist_ok=True)
+    if not os.path.exists(LOG_PATH):
+        with open(LOG_PATH, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerow(LOG_HEADERS)
+
+def log_query(question, sql, retry_count, exec_time_ms, total_time_ms, status="success"):
+    """Append one row to logs/query_log.csv."""
+    _ensure_log_file()
+    with open(LOG_PATH, "a", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerow([
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            question,
+            sql or "FAILED",
+            retry_count,
+            round(exec_time_ms, 1),
+            round(total_time_ms, 1),
+            status,
+        ])
 
 def csv_to_sqlite(csv_path="data/sample_expenses.csv",db_path="data/ledger.db",table_name="expenses"):
 
@@ -65,7 +92,8 @@ Rules:
 - If the question is ambiguous or cannot be answered with the given schema, respond with exactly: CANNOT_ANSWER
 - Return ONLY the SQL query. No explanations, no markdown formatting, no code fences, no extra text.
 - For text comparisons in WHERE clauses, always use case-insensitive matching (e.g. LOWER(column) = LOWER('value') or LIKE), since the exact casing of stored values may differ from how the user phrases the question.
-- For date range questions (e.g. quarters, months, "last year"), use proper date comparison operators (>=, <, BETWEEN) on the actual date values. Never use LIKE pattern matching on date strings, since it can incorrectly match unintended dates (e.g. '2025-0%' would match both January and April).
+- For date range questions, use proper date comparison operators (>=, <, BETWEEN) on the actual date values. Never use LIKE pattern matching or SUBSTR on date strings.
+- For quarter-based questions, map quarters to month ranges using CAST(strftime('%m', date) AS INTEGER): Q1 = months 1-3, Q2 = months 4-6, Q3 = months 7-9, Q4 = months 10-12. Example for Q1 of 2025: WHERE date >= '2025-01-01' AND date < '2025-04-01'. If no year is specified, use strftime('%m', date) BETWEEN '01' AND '03' for Q1, etc.
 
 Schema:{schema_text}"""
 
@@ -115,6 +143,7 @@ def validate_sql(sql_query,schema):
     return (True,"None")
 
 def generate_valid_sql(user_query,schema,schema_text,max_retries=3):
+    """Returns (sql_string, retry_count). sql_string is None if all retries fail."""
     previous_sql=None
     error_message=None
 
@@ -123,10 +152,10 @@ def generate_valid_sql(user_query,schema,schema_text,max_retries=3):
         #Tuple Unpacking-->validate_sql returns a tuple(T/F,reason)
         is_valid, error_message = validate_sql(candidate_sql, schema)
         if is_valid:
-            return candidate_sql
+            return candidate_sql, i  # i=0 means first attempt succeeded
         previous_sql=candidate_sql
 
-    return None
+    return None, max_retries
 
 def execute_sql(sql_query,db_path):
     connection=sqlite3.connect(f"file:{db_path}?mode=ro",uri=True)
@@ -167,7 +196,7 @@ if __name__ == "__main__":
   schema_text=format_schema_for_prompt(schema)
 
   question="Which category do we spend the most on?"
-  sql = generate_valid_sql("What is the total marketing spend?", schema, schema_text)
+  sql, retries = generate_valid_sql("What is the total marketing spend?", schema, schema_text)
   result = execute_sql(sql, db_path)
   answer = generate_answer(question, sql, result)
   print(answer)

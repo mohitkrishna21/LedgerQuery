@@ -1,7 +1,8 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from ledger_pipeline import csv_to_sqlite, extract_schema, format_schema_for_prompt, generate_valid_sql, execute_sql, generate_answer
+from ledger_pipeline import csv_to_sqlite, extract_schema, format_schema_for_prompt, generate_valid_sql, execute_sql, generate_answer, log_query
+import time
 
 app=FastAPI()
 app.add_middleware(
@@ -52,12 +53,21 @@ async def ask_question(question:str = Form(...)):
     if current_db_path is None:
         return {"error": "No data uploaded yet"}
 
-    sql_query=generate_valid_sql(question,current_schema,current_schema_text)
+    t_start = time.time()
+
+    sql_query, retry_count = generate_valid_sql(question, current_schema, current_schema_text)
     if sql_query is None:
+        total_ms = (time.time() - t_start) * 1000
+        log_query(question, None, retry_count, 0, total_ms, status="failed")
         return {"error": "Could not generate a valid query for this question."}
 
-    result=execute_sql(sql_query,current_db_path)
+    t_exec = time.time()
+    result = execute_sql(sql_query, current_db_path)
+    exec_ms = (time.time() - t_exec) * 1000
 
-    answer=generate_answer(question,sql_query,result)
+    answer = generate_answer(question, sql_query, result)
 
-    return {"answer":answer, "sql":sql_query}
+    total_ms = (time.time() - t_start) * 1000
+    log_query(question, sql_query, retry_count, exec_ms, total_ms, status="success")
+
+    return {"answer": answer, "sql": sql_query}
