@@ -1,0 +1,2 @@
+timestamp,question,sql,retry_count,exec_time_ms,total_time_ms,status
+2026-08-15 08:15:50,Which vendor had the highest total spend?,SELECT vendor FROM expenses GROUP BY vendor ORDER BY SUM(amount) DESC LIMIT 1,0,5.1,1104.4,success
